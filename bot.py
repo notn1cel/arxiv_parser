@@ -86,11 +86,30 @@ async def list_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Ты ещё не добавил ни одной темы.")
 
+async def remove_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Укажи тему, которую хочешь удалить: /remove elliptic curves")
+        return
+
+    topic = " ".join(context.args)
+    user_id = update.effective_chat.id
+
+    cursor.execute("SELECT 1 FROM topics WHERE user_id = ? AND topic = ?", (user_id, topic))
+    if not cursor.fetchone():
+        await update.message.reply_text(f"Тема '{topic}' не найдена в твоём списке.")
+        return
+
+    cursor.execute("DELETE FROM topics WHERE user_id = ? AND topic = ?", (user_id, topic))
+    conn.commit()
+    await update.message.reply_text(f"Тема '{topic}' удалена.")
+
+
 # --- запуск приложения ---
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("add", add_topic))
 app.add_handler(CommandHandler("list", list_topics))
+app.add_handler(CommandHandler("remove", remove_topic))
 
 # --- планировщик на 6 часов ---
 scheduler = BackgroundScheduler()
