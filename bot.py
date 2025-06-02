@@ -57,10 +57,26 @@ async def add_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Укажи тему: /add elliptic curves")
         return
+
     topic = " ".join(context.args)
-    cursor.execute("INSERT INTO topics (user_id, topic) VALUES (?, ?)", (update.effective_chat.id, topic))
+    user_id = update.effective_chat.id
+
+    cursor.execute("INSERT INTO topics (user_id, topic) VALUES (?, ?)", (user_id, topic))
     conn.commit()
-    await update.message.reply_text(f"Тема '{topic}' добавлена!")
+
+    await update.message.reply_text(f"Тема '{topic}' добавлена! 🔍 Сейчас ищу свежие статьи...")
+
+    articles = search_arxiv(topic)
+    if not articles:
+        await update.message.reply_text("Ничего не найдено 😕")
+        return
+
+    response = f"📚 Топ-5 статей по теме *{topic}*:\n\n"
+    for title, link in articles:
+        response += f"• [{title}]({link})\n"
+    
+    await update.message.reply_text(response, parse_mode="Markdown")
+
 
 async def list_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("SELECT topic FROM topics WHERE user_id = ?", (update.effective_chat.id,))
